@@ -1,0 +1,57 @@
+name: Docker
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - master
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        version:
+          - 'v28'
+    steps:
+      - uses: actions/checkout@v2
+      - name: Build Image
+        run: docker build -t mygento/android:${{ matrix.version }} -f Dockerfile .
+      - name: Test Vault
+        run: docker run --rm mygento/android:${{ matrix.version }} vault -v
+      - name: Test PHP
+        run: docker run --rm mygento/android:${{ matrix.version }} php -v
+      - name: Test Composer
+        run: docker run --rm mygento/android:${{ matrix.version }} composer -V
+
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v1
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.CR_PAT }}
+
+      - name: Push image
+        run: |
+          export IMAGE_NAME=mygento/android:${{ matrix.version }}
+          export IMAGE_ID=ghcr.io/luckyraul/android:${{ matrix.version }}
+
+          # Change all uppercase to lowercase
+          export IMAGE_ID=$(echo $IMAGE_ID | tr '[A-Z]' '[a-z]')
+
+          echo $IMAGE_ID
+
+          docker tag $IMAGE_NAME $IMAGE_ID
+          docker push $IMAGE_ID
+      - name: Push image Mygento
+        run: |
+          export IMAGE_NAME=mygento/android:${{ matrix.version }}
+          export IMAGE_ID=ghcr.io/mygento/android:${{ matrix.version }}
+
+          # Change all uppercase to lowercase
+          export IMAGE_ID=$(echo $IMAGE_ID | tr '[A-Z]' '[a-z]')
+
+          echo $IMAGE_ID
+
+          docker tag $IMAGE_NAME $IMAGE_ID
+          docker push $IMAGE_ID
