@@ -1,4 +1,4 @@
-FROM openjdk:8-jdk
+FROM openjdk:11-jdk
 
 RUN apt-get -qq update && \
     apt-get -qqy install curl wget tar unzip lib32stdc++6 lib32z1 uuid-runtime
@@ -10,31 +10,32 @@ RUN apt-get -q update && apt-get install -qqy locales && \
 
 ENV LANG en_US.utf8
 
-ENV VAULT_VERSION=1.7.1
+ENV VAULT_VERSION=1.9.3
 
-ENV ANDROID_HOME=/usr/local/android/sdk ANDROID_VERSION=28 ANDROID_BUILD_TOOLS_VERSION=28.0.3 SDK_URL=https://dl.google.com/android/repository/sdk-tools-linux-4333796.zip
+ENV ANDROID_SDK_TOOLS_VERSION 8092744
+ENV ANDROID_PLATFORM_VERSION 29
+ENV ANDROID_BUILD_TOOLS_VERSION 30.0.2
+
+ENV ANDROID_HOME=/usr/local/android/sdk
+
+ENV PATH=${PATH}:${ANDROID_HOME}/cmdline-tools/tools/bin:${ANDROID_HOME}/platform-tools
 
 ADD build.sh /opt/build.sh
 ADD deploy.sh /opt/deploy.sh
 
-RUN echo "Downloading sdk tools..." && \
-    mkdir -p $ANDROID_HOME && \
-    cd $ANDROID_HOME && \
-    wget --quiet -O sdk-tools.zip $SDK_URL
-
-RUN echo "Extracting sdk tools..." && \
-    unzip -q $ANDROID_HOME/sdk-tools.zip -d $ANDROID_HOME && \
-    rm $ANDROID_HOME/sdk-tools.zip && \
-    mkdir /root/.android/ && \
-    touch /root/.android/repositories.cfg
-
-RUN echo "Applying licenses" && \
-    mkdir -p $ANDROID_HOME/licenses || true && \
-    cd $ANDROID_HOME && \
-    echo yes | tools/bin/sdkmanager "platforms;android-${ANDROID_VERSION}" && \
-    echo yes | tools/bin/sdkmanager "platform-tools" && \
-    echo yes | tools/bin/sdkmanager "build-tools;${ANDROID_BUILD_TOOLS_VERSION}" && \
-    yes | tools/bin/sdkmanager --licenses
+RUN echo "Downloading sdk tools..." \
+  && mkdir -p $ANDROID_HOME \
+  && cd $ANDROID_HOME \
+  && curl -C - --output android-sdk-tools.zip https://dl.google.com/android/repository/commandlinetools-linux-${ANDROID_SDK_TOOLS_VERSION}_latest.zip \
+  && mkdir -p ${ANDROID_HOME}/cmdline-tools/ \
+  && unzip -q android-sdk-tools.zip -d ${ANDROID_HOME}/cmdline-tools/ \
+  && mv ${ANDROID_HOME}/cmdline-tools/cmdline-tools  ${ANDROID_HOME}/cmdline-tools/tools \
+  && rm android-sdk-tools.zip \
+  && yes | sdkmanager --licenses \
+  && touch $HOME/.android/repositories.cfg \
+  && sdkmanager --update \
+  && sdkmanager platform-tools \
+  && sdkmanager "platforms;android-$ANDROID_PLATFORM_VERSION" "build-tools;$ANDROID_BUILD_TOOLS_VERSION"
 
 RUN wget -q https://releases.hashicorp.com/vault/${VAULT_VERSION}/vault_${VAULT_VERSION}_linux_amd64.zip && \
     unzip vault_${VAULT_VERSION}_linux_amd64.zip && \
@@ -44,7 +45,7 @@ RUN wget -q https://releases.hashicorp.com/vault/${VAULT_VERSION}/vault_${VAULT_
 
 RUN apt-get -qq update \
   && apt-get -qqy install curl ca-certificates \
-  && apt-get -qqy install php7.3-cli php7.3-curl php7.3-intl php7.3-xml php7.3-mbstring php7.3-gd php7.3-zip \
+  && apt-get -qqy install php7.4-cli php7.4-curl php7.4-intl php7.4-xml php7.4-mbstring php7.4-gd php7.4-zip \
   && apt-get clean \
   && curl -L https://getcomposer.org/composer-1.phar -o /usr/local/bin/composer \
   && chmod +x /usr/local/bin/composer \
