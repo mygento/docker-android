@@ -12,7 +12,7 @@ jobs:
     strategy:
       matrix:
         version:
-          - 'v29'
+          - 'v30'
     steps:
       - uses: actions/checkout@v2
       - name: Build Image
