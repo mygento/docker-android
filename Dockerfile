@@ -10,15 +10,16 @@ RUN apt-get -q update && apt-get install -qqy locales \
     && update-locale LANG=en_US.UTF-8 \
     && rm -rf /var/lib/apt/lists/*
 
-LABEL org.opencontainers.image.source https://github.com/mygento/docker-android 
+LABEL org.opencontainers.image.source=https://github.com/mygento/docker-android
 
 ENV LANG=en_US.utf8
 ENV VAULT_VERSION=1.21.4
-ENV ANDROID_SDK_TOOLS_VERSION=11076708
-ENV ANDROID_PLATFORM_VERSION=34
-ENV ANDROID_BUILD_TOOLS_VERSION=34.0.0
+ENV ANDROID_SDK_TOOLS_VERSION="13114758"
+ENV ANDROID_PLATFORM_VERSION=36
+ENV ANDROID_BUILD_TOOLS_VERSION="36.0.0"
 ENV ANDROID_HOME=/usr/local/android/sdk
-ENV PATH=${PATH}:${ANDROID_HOME}/cmdline-tools/tools/bin:${ANDROID_HOME}/platform-tools
+ENV ANDROID_SDK_ROOT=/usr/local/android/sdk
+ENV PATH=${PATH}:${ANDROID_HOME}/cmdline-tools/latest/bin:${ANDROID_HOME}/platform-tools
 
 ADD build.sh /opt/build.sh
 ADD deploy.sh /opt/deploy.sh
@@ -29,7 +30,7 @@ RUN echo "Downloading sdk tools..." \
   && curl -C - --output android-sdk-tools.zip https://dl.google.com/android/repository/commandlinetools-linux-${ANDROID_SDK_TOOLS_VERSION}_latest.zip \
   && mkdir -p ${ANDROID_HOME}/cmdline-tools/ \
   && unzip -q android-sdk-tools.zip -d ${ANDROID_HOME}/cmdline-tools/ \
-  && mv ${ANDROID_HOME}/cmdline-tools/cmdline-tools  ${ANDROID_HOME}/cmdline-tools/tools \
+  && mv ${ANDROID_HOME}/cmdline-tools/cmdline-tools ${ANDROID_HOME}/cmdline-tools/latest \
   && rm android-sdk-tools.zip \
   && yes | sdkmanager --licenses \
   && touch $HOME/.android/repositories.cfg \
