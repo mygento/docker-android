@@ -1,23 +1,23 @@
-FROM openjdk:11-jdk
+FROM eclipse-temurin:17-jdk-noble
 
 RUN apt-get -qq update && \
     apt-get -qqy install curl wget tar unzip lib32stdc++6 lib32z1 uuid-runtime
 
 # make the "en_US.UTF-8" locale so gradle will be utf-8 enabled by default
-RUN apt-get -q update && apt-get install -qqy locales && \
-    rm -rf /var/lib/apt/lists/* && \
-    localedef -i en_US -c -f UTF-8 -A /usr/share/locale/locale.alias en_US.UTF-8
+RUN apt-get -q update && apt-get install -qqy locales \
+    && sed -i 's/# en_US.UTF-8 UTF-8/en_US.UTF-8 UTF-8/' /etc/locale.gen \
+    && locale-gen en_US.UTF-8 \
+    && update-locale LANG=en_US.UTF-8 \
+    && rm -rf /var/lib/apt/lists/*
 
-ENV LANG en_US.utf8
+LABEL org.opencontainers.image.source https://github.com/mygento/docker-android 
 
-ENV VAULT_VERSION=1.9.3
-
-ENV ANDROID_SDK_TOOLS_VERSION 8092744
-ENV ANDROID_PLATFORM_VERSION 31
-ENV ANDROID_BUILD_TOOLS_VERSION 30.0.2
-
+ENV LANG=en_US.utf8
+ENV VAULT_VERSION=1.21.4
+ENV ANDROID_SDK_TOOLS_VERSION=11076708
+ENV ANDROID_PLATFORM_VERSION=34
+ENV ANDROID_BUILD_TOOLS_VERSION=34.0.0
 ENV ANDROID_HOME=/usr/local/android/sdk
-
 ENV PATH=${PATH}:${ANDROID_HOME}/cmdline-tools/tools/bin:${ANDROID_HOME}/platform-tools
 
 ADD build.sh /opt/build.sh
@@ -45,10 +45,11 @@ RUN wget -q https://releases.hashicorp.com/vault/${VAULT_VERSION}/vault_${VAULT_
 
 RUN apt-get -qq update \
   && apt-get -qqy install curl ca-certificates \
-  && apt-get -qqy install php7.4-cli php7.4-curl php7.4-intl php7.4-xml php7.4-mbstring php7.4-gd php7.4-zip \
+  && apt-get -qqy install php8.3-cli php8.3-curl php8.3-intl php8.3-xml php8.3-mbstring php8.3-gd php8.3-zip \
   && apt-get clean \
-  && curl -L https://getcomposer.org/composer-1.phar -o /usr/local/bin/composer \
+  && curl -L https://getcomposer.org/download/latest-2.2.x/composer.phar -o /usr/local/bin/composer \
   && chmod +x /usr/local/bin/composer \
+  && composer global config --no-plugins allow-plugins.phpro/grumphp true \
   && composer global require phpro/grumphp \
   && composer global require php-parallel-lint/php-parallel-lint \
   && composer global require jumbojett/openid-connect-php \
