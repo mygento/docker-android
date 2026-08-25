@@ -14,9 +14,9 @@ LABEL org.opencontainers.image.source=https://github.com/mygento/docker-android
 
 ENV LANG=en_US.utf8
 ENV VAULT_VERSION=1.21.4
-ENV ANDROID_SDK_TOOLS_VERSION="13114758"
+ENV ANDROID_SDK_TOOLS_VERSION="15859902"
 ENV ANDROID_PLATFORM_VERSION=36
-ENV ANDROID_BUILD_TOOLS_VERSION="36.0.0"
+ENV ANDROID_BUILD_TOOLS_VERSION="37.0.0"
 ENV ANDROID_HOME=/usr/local/android/sdk
 ENV ANDROID_SDK_ROOT=/usr/local/android/sdk
 ENV PATH=${PATH}:${ANDROID_HOME}/cmdline-tools/latest/bin:${ANDROID_HOME}/platform-tools
@@ -34,7 +34,6 @@ RUN echo "Downloading sdk tools..." \
   && rm android-sdk-tools.zip \
   && yes | sdkmanager --licenses \
   && touch $HOME/.android/repositories.cfg \
-  && sdkmanager --update \
   && sdkmanager platform-tools \
   && sdkmanager "platforms;android-$ANDROID_PLATFORM_VERSION" "build-tools;$ANDROID_BUILD_TOOLS_VERSION"
 
