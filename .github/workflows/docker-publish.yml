@@ -6,23 +6,62 @@ on:
     branches:
       - master
 
+env:
+  ANDROID_BUILD_TOOLS_VERSION: '37.0.0'
+
 jobs:
   build:
     runs-on: ubuntu-latest
+
     strategy:
+      fail-fast: false
       matrix:
-        version:
-          - 'v37'
+        include:
+          - java: '17'
+          - java: '21'
+          - java: '25'
+
     steps:
-      - uses: actions/checkout@v6
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Generate image tag
+        id: meta
+        run: |
+          ANDROID_VERSION="${ANDROID_BUILD_TOOLS_VERSION%%.*}"
+          echo "tag=v${ANDROID_VERSION}-java${{ matrix.java }}" >> "$GITHUB_OUTPUT"
+
       - name: Build Image
-        run: docker build -t mygento/android:${{ matrix.version }} -f Dockerfile .
+        run: |
+          docker build \
+            --build-arg ANDROID_BUILD_TOOLS_VERSION=${ANDROID_BUILD_TOOLS_VERSION} \
+            -t mygento/android:${{ steps.meta.outputs.tag }} \
+            -f ${{ matrix.java }}/Dockerfile .
+
+      - name: Test Java
+        run: |
+          docker run --rm mygento/android:${{ steps.meta.outputs.tag }} java -version
+
+      - name: Test Android SDK
+        run: |
+          docker run --rm mygento/android:${{ steps.meta.outputs.tag }} sdkmanager --version
+
+      - name: Test Android Build Tools
+        run: |
+          docker run --rm mygento/android:${{ steps.meta.outputs.tag }} \
+            ls -la /usr/local/android/sdk/build-tools/${ANDROID_BUILD_TOOLS_VERSION}
+
       - name: Test Vault
-        run: docker run --rm mygento/android:${{ matrix.version }} vault -v
+        run: |
+          docker run --rm mygento/android:${{ steps.meta.outputs.tag }} vault -v
+
       - name: Test PHP
-        run: docker run --rm mygento/android:${{ matrix.version }} php -v
+        run: |
+          docker run --rm mygento/android:${{ steps.meta.outputs.tag }} php -v
+
       - name: Test Composer
-        run: docker run --rm mygento/android:${{ matrix.version }} composer -V
+        run: |
+          docker run --rm mygento/android:${{ steps.meta.outputs.tag }} composer -V
 
       - name: Login to GitHub Container Registry
         uses: docker/login-action@v4
@@ -33,45 +72,39 @@ jobs:
 
       - name: Push image LR
         run: |
-          export IMAGE_NAME=mygento/android:${{ matrix.version }}
-          export IMAGE_ID=ghcr.io/luckyraul/android:${{ matrix.version }}
+          IMAGE_NAME=mygento/android:${{ steps.meta.outputs.tag }}
+          IMAGE_ID=ghcr.io/luckyraul/android:${{ steps.meta.outputs.tag }}
 
-          # Change all uppercase to lowercase
-          export IMAGE_ID=$(echo $IMAGE_ID | tr '[A-Z]' '[a-z]')
+          docker tag "$IMAGE_NAME" "$IMAGE_ID"
+          docker push "$IMAGE_ID"
 
-          echo $IMAGE_ID
-
-          docker tag $IMAGE_NAME $IMAGE_ID
-          docker push $IMAGE_ID
       - name: Push image Mygento
         run: |
-          export IMAGE_NAME=mygento/android:${{ matrix.version }}
-          export IMAGE_ID=ghcr.io/mygento/android:${{ matrix.version }}
+          IMAGE_NAME=mygento/android:${{ steps.meta.outputs.tag }}
+          IMAGE_ID=ghcr.io/mygento/android:${{ steps.meta.outputs.tag }}
 
-          # Change all uppercase to lowercase
-          export IMAGE_ID=$(echo $IMAGE_ID | tr '[A-Z]' '[a-z]')
+          docker tag "$IMAGE_NAME" "$IMAGE_ID"
+          docker push "$IMAGE_ID"
 
-          echo $IMAGE_ID
-
-          docker tag $IMAGE_NAME $IMAGE_ID
-          docker push $IMAGE_ID
   post_build:
-      needs: [build]
-      runs-on: ubuntu-latest
-      steps:
-        - name: Delete untagged GHCR LR
-          uses: Chizkiyahu/delete-untagged-ghcr-action@v6
-          with:
-            token: ${{ secrets.CR_PAT }}
-            repository_owner: luckyraul
-            repository: ''
-            owner_type: user
-            package_name: android
-        - name: Delete untagged GHCR Mygento
-          uses: Chizkiyahu/delete-untagged-ghcr-action@v6
-          with:
-            token: ${{ secrets.CR_PAT }}
-            repository_owner: ${{ github.repository_owner }}
-            repository: ''
-            owner_type: org
-            package_name: android
+    needs: [build]
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Delete untagged GHCR LR
+        uses: Chizkiyahu/delete-untagged-ghcr-action@v6
+        with:
+          token: ${{ secrets.CR_PAT }}
+          repository_owner: luckyraul
+          repository: ''
+          owner_type: user
+          package_name: android
+
+      - name: Delete untagged GHCR Mygento
+        uses: Chizkiyahu/delete-untagged-ghcr-action@v6
+        with:
+          token: ${{ secrets.CR_PAT }}
+          repository_owner: ${{ github.repository_owner }}
+          repository: ''
+          owner_type: org
+          package_name: android

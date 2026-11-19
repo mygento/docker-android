@@ -1,9 +1,11 @@
-FROM eclipse-temurin:17-jdk-noble
+FROM eclipse-temurin:25-jdk-noble
+
+ARG ANDROID_BUILD_TOOLS_VERSION=37.0.0
 
 RUN apt-get -qq update && \
     apt-get -qqy install curl wget tar unzip lib32stdc++6 lib32z1 uuid-runtime
 
-# make the "en_US.UTF-8" locale so gradle will be utf-8 enabled by default
+# Configure UTF-8 locale
 RUN apt-get -q update && apt-get install -qqy locales \
     && sed -i 's/# en_US.UTF-8 UTF-8/en_US.UTF-8 UTF-8/' /etc/locale.gen \
     && locale-gen en_US.UTF-8 \
@@ -16,7 +18,7 @@ ENV LANG=en_US.utf8
 ENV VAULT_VERSION=1.21.4
 ENV ANDROID_SDK_TOOLS_VERSION="15859902"
 ENV ANDROID_PLATFORM_VERSION=36
-ENV ANDROID_BUILD_TOOLS_VERSION="37.0.0"
+ENV ANDROID_BUILD_TOOLS_VERSION=${ANDROID_BUILD_TOOLS_VERSION}
 ENV ANDROID_HOME=/usr/local/android/sdk
 ENV ANDROID_SDK_ROOT=/usr/local/android/sdk
 ENV PATH=${PATH}:${ANDROID_HOME}/cmdline-tools/latest/bin:${ANDROID_HOME}/platform-tools
